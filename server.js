@@ -64,6 +64,9 @@ app.post('/bodygraph', async (req, res) => {
   try {
     const data = req.body;
 
+console.log('CENTERS:', JSON.stringify(data.centers));
+console.log('CHANNELS[0]:', JSON.stringify(data.channels?.[0]));
+console.log('GATES keys:', JSON.stringify(Object.keys(data.gates || {})));
     if (!data?.centers || !data?.gates) {
       return res.status(400).json({
         error: 'Нужен полный JSON от THD API (с полями centers и gates)'
