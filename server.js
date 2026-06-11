@@ -37,11 +37,42 @@ function sanitizeSvg(svgString) {
   );
 }
 
-// ─── SVG → PNG через sharp ────────────────────────────────────────────────────
+// ─── Фоновый PNG (извлечён из Canva-шаблона) ─────────────────────────────────
+const BACKGROUND_PATH = path.join(__dirname, 'background.png');
+const BACKGROUND_BUF  = fs.existsSync(BACKGROUND_PATH)
+  ? fs.readFileSync(BACKGROUND_PATH)
+  : null;
+
+// ─── SVG → PNG через sharp + compositing с фоном ─────────────────────────────
 async function svgToPng(svgString) {
-  const clean = sanitizeSvg(svgString);
+  // Убираем embedded <image> из SVG — фон подкладываем отдельно
+  const noImg = svgString.replace(/<image[^>]*\/>/g, '').replace(/<image[^>]*>[\s\S]*?<\/image>/g, '');
+  const clean = sanitizeSvg(noImg);
   const buf   = Buffer.from(clean, 'utf-8');
-  return await sharp(buf, { density: 150 }).png().toBuffer();
+
+  // Рендерим прозрачный SVG-оверлей
+  const overlay = await sharp(buf, { density: 150 }).png().toBuffer();
+  const { width, height } = await sharp(overlay).metadata();
+
+  if (!BACKGROUND_BUF) {
+    // Нет фона — возвращаем просто SVG как PNG
+    return overlay;
+  }
+
+  // Масштабируем фон под размер оверлея
+  // Видимая область фонового PNG: первые ~850px по ширине и высоте (SVG viewBox = 850.5)
+  const CROP_W = 850, CROP_H = 850;
+  const bg = await sharp(BACKGROUND_BUF)
+    .extract({ left: 0, top: 0, width: CROP_W, height: CROP_H })
+    .resize(width, height)
+    .png()
+    .toBuffer();
+
+  // Склеиваем: фон + оверлей
+  return await sharp(bg)
+    .composite([{ input: overlay, blend: 'over' }])
+    .png()
+    .toBuffer();
 }
 
 // ─── SVG-превью (без ImageMagick, для тестирования) ──────────────────────────
@@ -49,44 +80,4 @@ app.post('/bodygraph/svg', (req, res) => {
   try {
     const data = req.body;
     if (!data?.centers || !data?.gates) {
-      return res.status(400).json({ error: 'Нужны поля centers и gates' });
-    }
-    const svg = renderBodygraph(data);
-    res.set('Content-Type', 'image/svg+xml');
-    res.send(svg);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ─── Генерация PNG ────────────────────────────────────────────────────────────
-app.post('/bodygraph', async (req, res) => {
-  try {
-    const data = req.body;
-
-console.log('CENTERS:', JSON.stringify(data.centers));
-console.log('CHANNELS[0]:', JSON.stringify(data.channels?.[0]));
-console.log('GATES keys:', JSON.stringify(Object.keys(data.gates || {})));
-    if (!data?.centers || !data?.gates) {
-      return res.status(400).json({
-        error: 'Нужен полный JSON от THD API (с полями centers и gates)'
-      });
-    }
-
-    // mode=debug → программный рендерер; по умолчанию → Canva-шаблон
-    const useDebug = req.query.mode === 'debug';
-    const svg = useDebug ? generateBodygraph(data) : renderBodygraph(data);
-    const png = await svgToPng(svg);
-
-    res.set('Content-Type', 'image/png');
-    res.send(png);
-
-  } catch (err) {
-    console.error('Ошибка:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.listen(PORT, () => {
-  console.log(`✅ Bodygraph service запущен: http://localhost:${PORT}`);
-});
+      return
