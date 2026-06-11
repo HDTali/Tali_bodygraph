@@ -1,0 +1,10 @@
+'use strict';
+const fs = require('fs');
+const { renderBodygraph } = require('./render_canva.js');
+const apiData = JSON.parse(fs.readFileSync('/sessions/elegant-serene-ramanujan/mnt/outputs/natali_thd.json', 'utf-8'));
+const svg = renderBodygraph(apiData);
+fs.writeFileSync('/sessions/elegant-serene-ramanujan/mnt/outputs/test_v8.svg', svg);
+console.log('SVG written, size:', svg.length, 'bytes');
+const textMatches = svg.match(/<text[^>]+>/g) || [];
+console.log('Text elements:', textMatches.length);
+textMatches.forEach(t => console.log(' ', t.substring(0, 100)));
