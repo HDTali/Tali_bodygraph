@@ -106,16 +106,28 @@ function chanPerp(dx,dy,off){
   return r1?[[p1x,p1y],[p2x,p2y]]:[[p2x,p2y],[p1x,p1y]];
 }
 
-function drawChanLine(x1,y1,x2,y2,gA,gB,pG,dG){
-  const dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy);if(len<1)return'';
+// Рисует ПОЛОВИНУ канала от (gx,gy) до середины к (tx,ty).
+// Обе линии одного цвета: D=красный, P=чёрный, оба=одна красная+одна чёрная, ни одного=призрак.
+function drawGateStub(gx,gy,tx,ty,g,pG,dG){
+  const mx=(gx+tx)/2,my=(gy+ty)/2;
+  const dx=mx-gx,dy=my-gy;
+  if(Math.hypot(dx,dy)<2)return'';
   const sw=4.5,OFF=sw/2;
   const perp=chanPerp(dx,dy,OFF);
-  const rx=perp[0][0],ry=perp[0][1],dpx=perp[1][0],dpy=perp[1][1];
-  const pAct=pG.has(gA)||pG.has(gB),dAct=dG.has(gA)||dG.has(gB);
-  const po=pAct?0.90:0.07,dop=dAct?0.90:0.07;
   const f=function(v){return v.toFixed(1);};
-  return '<line x1="'+f(x1+dpx)+'" y1="'+f(y1+dpy)+'" x2="'+f(x2+dpx)+'" y2="'+f(y2+dpy)+'" stroke="'+PC.chP+'" stroke-width="'+sw+'" stroke-linecap="round" opacity="'+po+'"/>'+
-         '<line x1="'+f(x1+rx)+'" y1="'+f(y1+ry)+'" x2="'+f(x2+rx)+'" y2="'+f(y2+ry)+'" stroke="'+PC.chR+'" stroke-width="'+sw+'" stroke-linecap="round" opacity="'+dop+'"/>';
+  const isP=pG.has(g),isD=dG.has(g);
+  function ln(ox,oy,col,op){
+    return'<line x1="'+f(gx+ox)+'" y1="'+f(gy+oy)+'" x2="'+f(mx+ox)+'" y2="'+f(my+oy)+'" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="round" opacity="'+op+'"/>';
+  }
+  if(isP&&isD){
+    return ln(perp[1][0],perp[1][1],PC.chP,0.9)+ln(perp[0][0],perp[0][1],PC.chR,0.9);
+  }else if(isD){
+    return ln(perp[1][0],perp[1][1],PC.chR,0.9)+ln(perp[0][0],perp[0][1],PC.chR,0.9);
+  }else if(isP){
+    return ln(perp[1][0],perp[1][1],PC.chP,0.9)+ln(perp[0][0],perp[0][1],PC.chP,0.9);
+  }else{
+    return ln(perp[1][0],perp[1][1],PC.chP,0.08)+ln(perp[0][0],perp[0][1],PC.chP,0.08);
+  }
 }
 
 function lineIntersect(x1,y1,x2,y2,x3,y3,x4,y4){
@@ -125,37 +137,52 @@ function lineIntersect(x1,y1,x2,y2,x3,y3,x4,y4){
   return[x1+t*(x2-x1),y1+t*(y2-y1)];
 }
 
-function drawIntCh(pG,dG){
-  const p1=gXY('Spleen',57),p2=gXY('Throat',20);
-  return drawChanLine(p1[0],p1[1],p2[0],p2[1],57,20,pG,dG);
+// Рисует заглушку канала интеграции от (sx,sy) до точки пересечения (ex,ey) на оси 57-20.
+// Обе линии одного цвета по активации ворот g.
+function drawIntStub(sx,sy,ex,ey,g,pG,dG,cx1,cy1,cx2,cy2){
+  const sdx=ex-sx,sdy=ey-sy;
+  if(Math.hypot(sdx,sdy)<1)return'';
+  const sw=4.5,OFF=sw/2;
+  const perp=chanPerp(sdx,sdy,OFF);
+  const isP=pG.has(g),isD=dG.has(g);
+  const f=function(v){return v.toFixed(1);};
+  function ep(ox,oy){
+    return lineIntersect(sx+ox,sy+oy,sx+ox+sdx,sy+oy+sdy,cx1,cy1,cx2,cy2)||[ex+ox,ey+oy];
+  }
+  function ln(ox,oy,col,op){
+    const e=ep(ox,oy);
+    return'<line x1="'+f(sx+ox)+'" y1="'+f(sy+oy)+'" x2="'+f(e[0])+'" y2="'+f(e[1])+'" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="round" opacity="'+op+'"/>';
+  }
+  const p0x=perp[0][0],p0y=perp[0][1],p1x=perp[1][0],p1y=perp[1][1];
+  if(isP&&isD) return ln(p1x,p1y,PC.chP,0.9)+ln(p0x,p0y,PC.chR,0.9);
+  if(isD)      return ln(p1x,p1y,PC.chR,0.9)+ln(p0x,p0y,PC.chR,0.9);
+  if(isP)      return ln(p1x,p1y,PC.chP,0.9)+ln(p0x,p0y,PC.chP,0.9);
+  return         ln(p1x,p1y,PC.chP,0.08)+ln(p0x,p0y,PC.chP,0.08);
 }
 
-function drawIntSpine(pG,dG){
+function drawIntChannels(pG,dG){
   const g20=gXY('Throat',20),g57=gXY('Spleen',57);
   const g10=gXY('G',10),g34=gXY('Sacral',34);
   const g20x=g20[0],g20y=g20[1],g57x=g57[0],g57y=g57[1];
-  const g10x=g10[0],g10y=g10[1],g34x=g34[0],g34y=g34[1];
-  const ddy=g20y-g57y;if(Math.abs(ddy)<1)return'';
-  const T10=Math.max(0.01,Math.min(0.99,(g10y-g57y)/ddy));
-  const j10x=g57x+T10*(g20x-g57x);
-  const j34x=g57x+T_J34*(g20x-g57x),j34y=g57y+T_J34*ddy;
-  const sw=4.5,OFF=sw/2;
+  const ddy=g20y-g57y;
+  if(Math.abs(ddy)<1)return'';
   const cLen=Math.hypot(g20x-g57x,ddy)||1;
   const cnx=(g20x-g57x)/cLen,cny=ddy/cLen;
   const cx1=g57x-cnx*300,cy1=g57y-cny*300,cx2=g20x+cnx*300,cy2=g20y+cny*300;
-  function stub(sx,sy,ex,ey,gA,gB){
-    const sdx=ex-sx,sdy=ey-sy;if(Math.hypot(sdx,sdy)<1)return'';
-    const perp=chanPerp(sdx,sdy,OFF);
-    const rx=perp[0][0],ry=perp[0][1],dpx=perp[1][0],dpy=perp[1][1];
-    const pAct=pG.has(gA)||pG.has(gB),dAct=dG.has(gA)||dG.has(gB);
-    const po=pAct?0.90:0.07,dop=dAct?0.90:0.07;
-    const bEnd=lineIntersect(sx+dpx,sy+dpy,sx+dpx+sdx,sy+dpy+sdy,cx1,cy1,cx2,cy2)||[ex+dpx,ey+dpy];
-    const rEnd=lineIntersect(sx+rx,sy+ry,sx+rx+sdx,sy+ry+sdy,cx1,cy1,cx2,cy2)||[ex+rx,ey+ry];
-    const f=function(v){return v.toFixed(1);};
-    return '<line x1="'+f(sx+dpx)+'" y1="'+f(sy+dpy)+'" x2="'+f(bEnd[0])+'" y2="'+f(bEnd[1])+'" stroke="'+PC.chP+'" stroke-width="'+sw+'" stroke-linecap="round" opacity="'+dop+'"/>'+
-           '<line x1="'+f(sx+rx)+'" y1="'+f(sy+ry)+'" x2="'+f(rEnd[0])+'" y2="'+f(rEnd[1])+'" stroke="'+PC.chR+'" stroke-width="'+sw+'" stroke-linecap="round" opacity="'+po+'"/>';
-  }
-  return stub(g10x,g10y,j10x,g10y,10,20)+stub(g34x,g34y,j34x,j34y,34,10);
+  // Середины 57-20 для половинчатых стабов
+  const mid57x=(g57x+g20x)/2,mid57y=(g57y+g20y)/2;
+  // Точки T-junction для 10 и 34
+  const T10=Math.max(0.01,Math.min(0.99,(g10[1]-g57y)/ddy));
+  const j10x=g57x+T10*(g20x-g57x),j10y=g57y+T10*ddy;
+  const j34x=g57x+T_J34*(g20x-g57x),j34y=g57y+T_J34*ddy;
+  // Сначала рисуем 57-20 как два полуканала (ворота 57 и 20)
+  var s='';
+  s+=drawGateStub(g57x,g57y,g20x,g20y,57,pG,dG);
+  s+=drawGateStub(g20x,g20y,g57x,g57y,20,pG,dG);
+  // Потом заглушки 10 и 34 ПОВЕРХ (закрывают торцы 57-20)
+  s+=drawIntStub(g10[0],g10[1],j10x,j10y,10,pG,dG,cx1,cy1,cx2,cy2);
+  s+=drawIntStub(g34[0],g34[1],j34x,j34y,34,pG,dG,cx1,cy1,cx2,cy2);
+  return s;
 }
 
 function symAttrs(planet,col){
@@ -239,15 +266,15 @@ function generateBodygraph(data){
   s+='<rect width="'+W+'" height="'+H+'" fill="'+PC.bg+'"/>';
   s+=drawBodySilhouette();
 
-  // Каналы: сначала 57-20, потом заглушки 10/34 поверх
-  s+=drawIntCh(pG,dG);
-  s+=drawIntSpine(pG,dG);
+  // Каналы: половинки от каждых ворот
+  s+=drawIntChannels(pG,dG);
   STD_CH.forEach(function(ck){
     const parts=ck.split('|');
     const ap=parts[0].split(':'),bp=parts[1].split(':');
     const cn1=ap[0],g1=parseInt(ap[1]),cn2=bp[0],g2=parseInt(bp[1]);
     const p1=gXY(cn1,g1),p2=gXY(cn2,g2);
-    s+=drawChanLine(p1[0],p1[1],p2[0],p2[1],g1,g2,pG,dG);
+    s+=drawGateStub(p1[0],p1[1],p2[0],p2[1],g1,pG,dG);
+    s+=drawGateStub(p2[0],p2[1],p1[0],p1[1],g2,pG,dG);
   });
 
   // Центры
@@ -268,16 +295,18 @@ function generateBodygraph(data){
       const g=parseInt(ge[0]),off=ge[1];
       const gx=c.x+off[0],gy=c.y+off[1];
       const r=11,fs=g>=10?10:11;
-      const gold=pG.has(g)||dG.has(g)||isDef;
-      const fill=gold?PC.gG:PC.gW,tf=gold?PC.gGT:PC.gWT,st=gold?PC.gGS:PC.gWS;
+      // Золото только если ворота активированы, иначе цвет центра
+      const gold=pG.has(g)||dG.has(g);
+      const fill=gold?PC.gG:(isDef?PC.cD:PC.cU);
+      const tf=gold?PC.gGT:(isDef?'#F5EEE4':'#A08060');      const st=gold?PC.gGS:(isDef?PC.str:PC.gWS);
       s+='<circle cx="'+gx.toFixed(1)+'" cy="'+gy.toFixed(1)+'" r="'+r+'" fill="'+fill+'" stroke="'+st+'" stroke-width="1.2"/>';
       s+='<text x="'+gx.toFixed(1)+'" y="'+(gy+3.8).toFixed(1)+'" text-anchor="middle" font-family="Arial" font-size="'+fs+'" font-weight="700" fill="'+tf+'">'+g+'</text>';
     });
   });
 
   s+=drawVariables(data);
-  s+=drawPlanetPanel(dActs,true,7);
-  s+=drawPlanetPanel(pActs,false,W-7-PW);
+  s+=drawPlanetPanel(dActs,true,22);
+  s+=drawPlanetPanel(pActs,false,W-22-PW);
 
   if(chart.type){
     s+='<rect x="0" y="'+(H-48)+'" width="'+W+'" height="48" fill="'+PC.chP+'" opacity="0.9"/>';
@@ -290,3 +319,4 @@ function generateBodygraph(data){
 }
 
 module.exports = {generateBodygraph: generateBodygraph};
+
