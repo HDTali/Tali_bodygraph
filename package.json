@@ -1,0 +1,17 @@
+{
+  "name": "bodygraph-service",
+  "version": "1.0.0",
+  "description": "Human Design bodygraph image generator for DesignKey bot",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "sharp": "^0.33.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
