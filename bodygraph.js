@@ -52,18 +52,23 @@ function inGateOrHarmonic(planet,gate,gp){
   for(var i=0;i<harm.length;i++){if((gp[String(harm[i])]||new Set()).has(planet))return true;}
   return false;
 }
-// Символ для активации: ▲ экзальтация, ▼ падение, ✦ джакстапозиция (оба)
-function getFixSym(gate,line,gp){
-  var sg=String(gate),sl=String(line);
+// Символ для активации: ▲ экзальтация, ▼ падение, ✦ джакстапозиция
+// planet = текущая планета активации (важно для ✦)
+function getFixSym(gate,line,planet,gp){
+  var sg=String(gate),sl=String(line),sp=String(planet||'');
   const l=(ICHING[sg]||{})[sl];
   if(!l)return'';
-  const isEx=inGateOrHarmonic(l.ex,gate,gp);
-  const isDet=inGateOrHarmonic(l.fall,gate,gp);
+  const isExCtx =inGateOrHarmonic(l.ex,  gate,gp); // ex-планета есть в gate/harmonic
+  const isDetCtx=inGateOrHarmonic(l.fall,gate,gp); // fall-планета есть в gate/harmonic
+  const isThisEx =(l.ex  ===sp); // текущая планета сама является ex-правителем
+  const isThisDet=(l.fall===sp); // текущая планета сама является fall-правителем
   var sym='';
-  if(isEx&&isDet)sym='✦';
-  else if(isEx)sym='▲';
-  else if(isDet)sym='▼';
-  if(sym)console.log('[FIX] gate='+sg+' line='+sl+' ex='+l.ex+'('+isEx+') fall='+l.fall+'('+isDet+') → '+sym);
+  // ✦: текущая планета зафиксирована (ex или fall) И противоположная энергия тоже присутствует
+  if((isThisEx&&isDetCtx)||(isThisDet&&isExCtx)||(isExCtx&&isDetCtx)) sym='✦';
+  else if(isExCtx) sym='▲';
+  else if(isDetCtx)sym='▼';
+  if(sym)console.log('[FIX] gate='+sg+' line='+sl+' planet='+sp+' thisEx='+isThisEx+' thisDet='+isThisDet+' exCtx='+isExCtx+' detCtx='+isDetCtx+' → '+sym);
+  else if(isExCtx||isDetCtx)console.log('[NEAR] gate='+sg+' line='+sl+' planet='+sp+' ex='+l.ex+'('+isExCtx+') fall='+l.fall+'('+isDetCtx+')');
   return sym;
 }
 // ─────────────────────────────────────────────────────────────
@@ -276,13 +281,13 @@ function drawPlanetPanel(acts,isDes,px,gp){
   r+='<text x="'+(px+PW/2)+'" y="40" text-anchor="middle" font-family="Arial" font-size="15" font-weight="bold" fill="'+col+'">'+(isDes?'Design':'Personality')+'</text>';
   acts.forEach(function(a,i){
     const yt=hH+i*rH,yg=yt+22,yc=yt+37;
-    const sym=PS[a.planet]||'?',fsym=a.planet==='Sun'?28:(a.planet==='Venus'||a.planet==='Mars')?26:23;
+    const sym=PS[a.planet]||'?',fsym=a.planet==='Sun'?28:(a.planet==='Venus'||a.planet==='Mars')?30:23;
     const gl=String(a.gate||''),ln=String(a.line||'');
     const ctb=a.ctb||'',zod=a.zodiac||'';
     const glW=gl.length*8+14;
     const sa=symAttrs(a.planet,col);
     // Символ фиксации: новая формула по HARMONICS + ICHING (не зависит от fixingState API)
-    const fixSymVal=getFixSym(a.gate,a.line,gp||{});
+    const fixSymVal=getFixSym(a.gate,a.line,a.planet,gp||{});
     const isJuxt=fixSymVal==='✦';
     const fixSym=isJuxt?'':fixSymVal; // ✦ рисуется как SVG-полигоны (гексаграмма)
     const retSym=a.isRetrograde?'℞':'';
