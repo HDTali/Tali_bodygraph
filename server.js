@@ -1,3 +1,4 @@
+'use strict';
 /**
  * server.js
  * Express: принимает JSON от THD API -> PNG бодиграфа
@@ -32,50 +33,155 @@ const CENTER_MAP = {
   spleen:'Spleen', root:'Root'
 };
 
-/**
- * Accepts either raw THD API response OR already-mapped internal format.
- * Returns internal format: { centers, gates, activations, channels, chart, variables }
- */
-function mapTHDData(raw) {
-  // Already in internal format?
-  if (raw.activations || (raw.gates && raw.gates.personalityGates)) return raw;
+const VERSION = 'v20260613-fix18';
 
-  // Raw THD API — may be wrapped in { success, data } or be the data object directly
-  const d = (raw.success !== undefined && raw.data) ? raw.data : raw;
+/**
+ * Конвертирует personality/design в map {planet: obj}.
+ * THD API может вернуть массив [{planet:"Sun",...}] ИЛИ объект {Sun:{...}}.
+ */
+function toActMap(src) {
+  if (!src) return {};
+  if (Array.isArray(src)) {
+    var m = {};
+    src.forEach(function(item){ if (item && item.planet) m[item.planet] = item; });
+    return m;
+  }
+  return src; // уже объект
+}
+
+/**
+ * Получить данные активации из объекта планеты.
+ * Поддерживает плоский {gate,line,color,...} и вложенный {activation:{gate,...}}.
+ */
+function getAct(obj) {
+  if (!obj) return null;
+  var a = (obj.activation && obj.activation.gate != null) ? obj.activation : obj;
+  return (a && a.gate != null) ? a : null;
+}
+
+/**
+ * Вычислить variable из разных форматов THD API.
+ */
+function computeVariable(src) {
+  var vt = (src.chart && src.chart.variableType) || '';
+  if (vt.length >= 7) {
+    return {
+      personalityMotivation:  vt[1] === 'L' ? 'Left' : 'Right',
+      personalityPerspective: vt[2] === 'L' ? 'Left' : 'Right',
+      designDigestion:        vt[5] === 'L' ? 'Left' : 'Right',
+      designEnvironment:      vt[6] === 'L' ? 'Left' : 'Right'
+    };
+  }
+  return {
+    designDigestion:        src.phs && src.phs.digestionOrientation,
+    designEnvironment:      src.phs && src.phs.environmentOrientation,
+    personalityMotivation:  src.ravePsychology && src.ravePsychology.motivationOrientation,
+    personalityPerspective: src.ravePsychology && src.ravePsychology.perspectiveOrientation
+  };
+}
+
+function addCtbToActs(acts) {
+  return (acts || []).map(function(a) {
+    var ctb = a.ctb;
+    if (!ctb && a.color != null) ctb = a.color + '.' + a.tone + '.' + a.base;
+    return Object.assign({}, a, {
+      ctb: ctb || '',
+      fixingState: a.fixingState || null,
+      isRetrograde: a.isRetrograde || false
+    });
+  });
+}
+
+function mapTHDData(raw) {
+  // Уже в internal format — добавляем variable и CTB если их нет
+  if (raw.gates && raw.gates.personalityGates) {
+    var variable = raw.variable || computeVariable(raw);
+    console.log('[EARLY] variable=' + JSON.stringify(variable));
+    var acts = raw.activations || {};
+    var p0 = acts.personality && acts.personality[0];
+    console.log('[EARLY] p0planet=' + (p0 && p0.planet) + ' p0gate=' + (p0 && p0.gate));
+    return Object.assign({}, raw, {
+      variable: variable,
+      activations: {
+        personality: addCtbToActs(acts.personality),
+        design:      addCtbToActs(acts.design)
+      }
+    });
+  }
+
+  // Unwrap { success, data:{...} } или { data:{...} } → берём data если есть chart/personality
+  const d = (raw.data && (raw.data.chart || raw.data.personality)) ? raw.data : raw;
+
+  console.log('[MAP] version=' + VERSION +
+    ' pType=' + (Array.isArray(d.personality) ? 'array['+d.personality.length+']' : typeof d.personality) +
+    ' dType=' + (Array.isArray(d.design) ? 'array['+d.design.length+']' : typeof d.design));
+
+  // Конвертируем personality/design в map {планета: объект}
+  var pMap = toActMap(d.personality);
+  var dMap = toActMap(d.design);
 
   // Centers
   const defined = (d.centers && d.centers.defined || [])
     .map(function(n){ return CENTER_MAP[n.toLowerCase()] || n; });
 
-  // Activations & gates
   const pActs = [], dActs = [], pGates = [], dGates = [];
 
   PLANET_ORDER.forEach(function(pl) {
-    var pObj = d.personality && d.personality[pl];
-    if (pObj && pObj.activation) {
-      var a = pObj.activation;
+    var pObj = pMap[pl];
+    var a = getAct(pObj);
+    if (a) {
       pGates.push(Number(a.gate));
+      var pSign = (pObj.astrology && pObj.astrology.sign) || pObj.sign || a.sign || '';
       pActs.push({
         planet: pl,
         gate: a.gate,
         line: a.line,
-        ctb: a.color + '.' + a.tone + '.' + a.base,
-        zodiac: ZOD_SYM[pObj.astrology && pObj.astrology.sign] || ''
+        ctb: (a.color != null) ? a.color + '.' + a.tone + '.' + a.base : '',
+        zodiac: ZOD_SYM[pSign] || '',
+        fixingState: a.fixingState || null,
+        isRetrograde: a.isRetrograde || false
       });
     }
-    var dObj = d.design && d.design[pl];
-    if (dObj && dObj.activation) {
-      var b = dObj.activation;
+
+    var dObj = dMap[pl];
+    var b = getAct(dObj);
+    if (b) {
       dGates.push(Number(b.gate));
+      var dSign = (dObj.astrology && dObj.astrology.sign) || dObj.sign || b.sign || '';
       dActs.push({
         planet: pl,
         gate: b.gate,
         line: b.line,
-        ctb: b.color + '.' + b.tone + '.' + b.base,
-        zodiac: ZOD_SYM[dObj.astrology && dObj.astrology.sign] || ''
+        ctb: (b.color != null) ? b.color + '.' + b.tone + '.' + b.base : '',
+        zodiac: ZOD_SYM[dSign] || '',
+        fixingState: b.fixingState || null,
+        isRetrograde: b.isRetrograde || false
       });
     }
   });
+
+  console.log('[MAP] pActs=' + pActs.length + ' dActs=' + dActs.length +
+    ' p0planet=' + (pActs[0] && pActs[0].planet) + ' p0gate=' + (pActs[0] && pActs[0].gate));
+
+  // Variable: из variableType строки, иначе из phs/ravePsychology
+  var variable;
+  var vt = (d.chart && d.chart.variableType) || '';
+  if (vt.length >= 7) {
+    variable = {
+      personalityMotivation:  vt[1] === 'L' ? 'Left' : 'Right',
+      personalityPerspective: vt[2] === 'L' ? 'Left' : 'Right',
+      designDigestion:        vt[5] === 'L' ? 'Left' : 'Right',
+      designEnvironment:      vt[6] === 'L' ? 'Left' : 'Right'
+    };
+  } else {
+    variable = {
+      designDigestion:        d.phs && d.phs.digestionOrientation,
+      designEnvironment:      d.phs && d.phs.environmentOrientation,
+      personalityMotivation:  d.ravePsychology && d.ravePsychology.motivationOrientation,
+      personalityPerspective: d.ravePsychology && d.ravePsychology.perspectiveOrientation
+    };
+  }
+  console.log('[MAP] vt="' + vt + '" variable=' + JSON.stringify(variable));
 
   return {
     centers:     { defined: defined },
@@ -86,16 +192,42 @@ function mapTHDData(raw) {
       type:       d.chart && d.chart.type,
       profile:    d.chart && d.chart.profile,
       authority:  d.chart && d.chart.authority,
-      definition: d.chart && d.chart.definition,
-      variable:   d.chart && d.chart.variable
-    }
+      definition: d.chart && d.chart.definition
+    },
+    variable: variable
   };
 }
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
 app.get('/health', function(req, res) {
-  res.json({ ok: true, service: 'bodygraph-generator' });
+  res.json({ ok: true, service: 'bodygraph-generator', version: VERSION });
+});
+
+// Диагностика: показывает структуру данных без генерации картинки
+app.post('/inspect', function(req, res) {
+  try {
+    const raw = req.body || {};
+    const d = (raw.data && (raw.data.chart || raw.data.personality)) ? raw.data : raw;
+    const pSrc = d.personality;
+    const dSrc = d.design;
+    const pMap = toActMap(pSrc);
+    const dMap = toActMap(dSrc);
+    const sunP = pMap['Sun'];
+    const sunA = getAct(sunP);
+    res.json({
+      version: VERSION,
+      personalityType: Array.isArray(pSrc) ? 'array['+pSrc.length+']' : typeof pSrc,
+      designType: Array.isArray(dSrc) ? 'array['+dSrc.length+']' : typeof dSrc,
+      pMapKeys: Object.keys(pMap).slice(0,5),
+      sunPersonality: sunP ? JSON.stringify(sunP).slice(0,200) : null,
+      sunActivation: sunA ? JSON.stringify(sunA).slice(0,200) : null,
+      variableType: d.chart && d.chart.variableType,
+      phs: d.phs,
+    });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 async function svgToPng(svgString) {
@@ -119,7 +251,11 @@ app.post('/bodygraph/svg', function(req, res) {
 
 app.post('/bodygraph', async function(req, res) {
   try {
-    const data = mapTHDData(req.body || {});
+    const raw = req.body || {};
+    const d = (raw.data && (raw.data.chart || raw.data.personality)) ? raw.data : raw;
+    console.log('[DBG] variableType:', d.chart && d.chart.variableType);
+    const data = mapTHDData(raw);
+    console.log('[DBG] variable after map:', JSON.stringify(data.variable));
     if (!data.centers || !data.gates) {
       return res.status(400).json({ error: 'Нужен полный JSON от THD API' });
     }
