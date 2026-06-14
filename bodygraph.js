@@ -37,7 +37,6 @@ function buildGatePlanets(acts){
     if(!gp[g])gp[g]=new Set();
     gp[g].add(a.planet);
   });
-  // Диагностика — видно в логах Render
   var keys=Object.keys(gp);
   var valid=keys.filter(function(k){return k&&k!=='undefined';});
   console.log('[GP] gates='+valid.length+' hasPlanets='+valid.some(function(k){var s=gp[k];return s&&[...s].some(function(p){return p&&p!=='undefined';});})+' sample='+valid.slice(0,3).map(function(k){return k+':['+[...gp[k]].join(',')+']';}).join(' '));
@@ -53,17 +52,15 @@ function inGateOrHarmonic(planet,gate,gp){
   return false;
 }
 // Символ для активации: ▲ экзальтация, ▼ падение, ✦ джакстапозиция
-// planet = текущая планета активации (важно для ✦)
 function getFixSym(gate,line,planet,gp){
   var sg=String(gate),sl=String(line),sp=String(planet||'');
   const l=(ICHING[sg]||{})[sl];
   if(!l)return'';
-  const isExCtx =inGateOrHarmonic(l.ex,  gate,gp); // ex-планета есть в gate/harmonic
-  const isDetCtx=inGateOrHarmonic(l.fall,gate,gp); // fall-планета есть в gate/harmonic
-  const isThisEx =(l.ex  ===sp); // текущая планета сама является ex-правителем
-  const isThisDet=(l.fall===sp); // текущая планета сама является fall-правителем
+  const isExCtx =inGateOrHarmonic(l.ex,  gate,gp);
+  const isDetCtx=inGateOrHarmonic(l.fall,gate,gp);
+  const isThisEx =(l.ex  ===sp);
+  const isThisDet=(l.fall===sp);
   var sym='';
-  // ✦: текущая планета зафиксирована (ex или fall) И противоположная энергия тоже присутствует
   if((isThisEx&&isDetCtx)||(isThisDet&&isExCtx)||(isExCtx&&isDetCtx)) sym='✦';
   else if(isExCtx) sym='▲';
   else if(isDetCtx)sym='▼';
@@ -154,8 +151,6 @@ function chanPerp(dx,dy,off){
   return r1?[[p1x,p1y],[p2x,p2y]]:[[p2x,p2y],[p1x,p1y]];
 }
 
-// Рисует ПОЛОВИНУ канала от (gx,gy) до середины к (tx,ty).
-// Обе линии одного цвета: D=красный, P=чёрный, оба=одна красная+одна чёрная, ни одного=призрак.
 function drawGateStub(gx,gy,tx,ty,g,pG,dG){
   const mx=(gx+tx)/2,my=(gy+ty)/2;
   const dx=mx-gx,dy=my-gy;
@@ -185,9 +180,6 @@ function lineIntersect(x1,y1,x2,y2,x3,y3,x4,y4){
   return[x1+t*(x2-x1),y1+t*(y2-y1)];
 }
 
-// Каналы интеграционного контура: 57-20, 34-20, 10-20, 34-57
-// Ось 57→20 делится на сегменты по T-junction воротам 34 и 10.
-// Сегменты не пересекаются — каждый окрашен по своим воротам.
 function drawIntChannels(pG,dG){
   const g20=gXY('Throat',20),g57=gXY('Spleen',57);
   const g34=gXY('Sacral',34);
@@ -197,14 +189,10 @@ function drawIntChannels(pG,dG){
   const spDx=g20[0]-g57[0],spDy=g20[1]-g57[1];
   const spLen2=spDx*spDx+spDy*spDy;
   if(spLen2<1)return'';
-  // Spine perp offsets — используются и для spine, и для ветки g10 (идеальный T-junction)
   const sp=chanPerp(spDx,spDy,OFF);
-  // Левый угол ромба G
   const g10cx=SC.G.x-SC.G.dw/2, g10cy=SC.G.y;
-  // T-junction g10: горизонтальная ветка — y=g10cy пересекает spine
   const t10=Math.max(0.01,Math.min(0.99,(g10cy-g57[1])/(spDy||1)));
   const j10x=g57[0]+t10*spDx, j10y=g10cy;
-  // T-junction g34
   const j34x=g57[0]+T_J34*spDx, j34y=g57[1]+T_J34*spDy;
   const isP57=pG.has(57),isD57=dG.has(57);
   const isP20=pG.has(20),isD20=dG.has(20);
@@ -222,17 +210,12 @@ function drawIntChannels(pG,dG){
     if(isP)    return ln(perp[1][0],perp[1][1],PC.chP,0.9)+ln(perp[0][0],perp[0][1],PC.chP,0.9);
     return         ln(perp[1][0],perp[1][1],PC.chP,0.08)+ln(perp[0][0],perp[0][1],PC.chP,0.08);
   }
-  // Spine segments
   s+=seg(g57[0],g57[1],j34x,j34y,isP57,isD57);
   s+=seg(j34x,j34y,j10x,j10y,isP57||isP34,isD57||isD34);
   s+=seg(j10x,j10y,g20[0],g20[1],isP20,isD20);
-  // Ветвь g10: строго перпендикулярно spine, те же смещения что spine → нет зазора
-  // Начало уходит под ромб на 15px, конец — точка j10
   const br10x=j10x-g10cx, br10y=j10y-g10cy, br10L=Math.hypot(br10x,br10y)||1;
   const g10sx=g10cx-(br10x/br10L)*15, g10sy=g10cy-(br10y/br10L)*15;
-  // Собственный перп ветки + точное пересечение с внешними линиями spine
   const br10Perp=chanPerp(br10x,br10y,OFF);
-  // Линия A (br10Perp[0]) пересекает spine line sp[1], линия B (br10Perp[1]) — spine line sp[0]
   const iA=lineIntersect(
     g10sx+br10Perp[0][0],g10sy+br10Perp[0][1],
     j10x+br10Perp[0][0], j10y+br10Perp[0][1],
@@ -251,13 +234,11 @@ function drawIntChannels(pG,dG){
   else if(isD10)   s+=g10lnB(PC.chR,0.9)+g10lnA(PC.chR,0.9);
   else if(isP10)   s+=g10lnB(PC.chP,0.9)+g10lnA(PC.chP,0.9);
   else             s+=g10lnB(PC.chP,0.08)+g10lnA(PC.chP,0.08);
-  // Ветвь g34: g34 → j34 + удлинение на sw
   const brDx=j34x-g34[0],brDy=j34y-g34[1],brLen=Math.hypot(brDx,brDy)||1;
   s+=seg(g34[0],g34[1],j34x+(brDx/brLen)*sw,j34y+(brDy/brLen)*sw,isP34,isD34);
   return s;
 }
 
-// Джакстапозиция: два правильных треугольника (▲▼) наложены в одну точку → гексаграмма
 function drawJuxtSym(cx,cy,col){
   const r=5.5,h=r*0.5,w=r*0.866;
   const f=function(v){return v.toFixed(1);};
@@ -286,12 +267,10 @@ function drawPlanetPanel(acts,isDes,px,gp){
     const ctb=a.ctb||'',zod=a.zodiac||'';
     const glW=gl.length*8+14;
     const sa=symAttrs(a.planet,col);
-    // Символ фиксации: новая формула по HARMONICS + ICHING (не зависит от fixingState API)
     const fixSymVal=getFixSym(a.gate,a.line,a.planet,gp||{});
     const isJuxt=fixSymVal==='✦';
-    const fixSym=isJuxt?'':fixSymVal; // ✦ рисуется как SVG-полигоны (гексаграмма)
+    const fixSym=isJuxt?'':fixSymVal;
     const retSym=a.isRetrograde?'℞':'';
-    // glW уже объявлена выше (gl.length*8+14); используем её для позиции гексаграммы
     if(isDes){
       r+='<text x="'+(px+13)+'" y="'+(yg+2)+'" text-anchor="middle" font-family="Arial" font-size="'+fsym+'" fill="'+col+'"'+sa+'>'+sym+'</text>';
       r+='<text x="'+(px+31)+'" y="'+yg+'" font-family="Arial" font-size="13" fill="'+col+'"><tspan font-weight="700">'+gl+'</tspan><tspan font-weight="700">.'+ln+'</tspan>'+(fixSym?'<tspan font-size="10" font-weight="bold" dx="2">'+fixSym+'</tspan>':'')+(retSym?'<tspan font-size="9" dx="1" opacity="0.7">'+retSym+'</tspan>':'')+'</text>';
@@ -313,11 +292,9 @@ function drawPlanetPanel(acts,isDes,px,gp){
 
 function drawVariables(data){
   const hx=SC.Head.x,hy=SC.Head.y;
-  // Variable: orientation из phs и ravePsychology (THD API)
   const varD=data.variable||{};
   function isLeft(o){return(o||'').toLowerCase()==='left';}
 
-  // Получаем ctb из активаций: Солнце (верхние стрелки) и Северный Узел (нижние)
   const dActs=(data.activations&&data.activations.design)||[];
   const pActs=(data.activations&&data.activations.personality)||[];
   function planetCtb(acts,name){
@@ -330,14 +307,12 @@ function drawVariables(data){
   const dCtbNode=planetCtb(dActs,'NorthNode');
   const pCtbNode=planetCtb(pActs,'NorthNode');
 
-  // Позиции: два ряда слева (Design) и два ряда справа (Personality)
   const rows={
     leftUp: [hx-168,hy+36],  leftDown: [hx-168,hy+90],
     rightUp:[hx+168,hy+36],  rightDown:[hx+168,hy+90]
   };
   var s='';
 
-  // Стрелка с хвостиком: tip=кончик, neck=переход голова→хвост, end=конец хвоста
   function arrow(ax,ay,leftDir,col){
     const hw=9,hh=7,tw=22,th=3,half=(hw+tw)/2;
     function f(v){return v.toFixed(1);}
@@ -348,28 +323,24 @@ function drawVariables(data){
     s+='<polygon points="'+pts+'" fill="'+col+'" opacity="0.92"/>';
   }
 
-  // Круг (цвет), треугольник (тон), пятиугольник (база)
   function shapes(ax,ay,isDesign,ctb){
     const col=isDesign?PC.chR:PC.chP;
-    const dir=isDesign?-1:1; // Design: фигуры левее стрелки; Personality: правее
-    const sp=44,r=15; // фигуры ×1.5 от оригинала (было sp=26,r=10)
+    const dir=isDesign?-1:1;
+    const sp=44,r=15;
     const [cv,tv,bv]=ctb;
-    const lbOp=' opacity="0.6"'; // подписи чуть приглушены
-    // Круг = цвет
+    const lbOp=' opacity="0.6"';
     if(cv!=null){
       const cx=ax+dir*sp;
       s+='<circle cx="'+cx+'" cy="'+ay+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="1.6"/>';
       s+='<text x="'+cx+'" y="'+(ay+5)+'" text-anchor="middle" font-family="Arial" font-size="11" font-weight="700" fill="'+col+'">'+cv+'</text>';
       s+='<text x="'+cx+'" y="'+(ay+r+10)+'" text-anchor="middle" font-family="Arial" font-size="7.5" fill="'+col+'"'+lbOp+'>color</text>';
     }
-    // Треугольник = тон (сдвинут +2px вниз для визуального выравнивания)
     if(tv!=null){
       const tx=ax+dir*sp*2,tr=15,ty=ay+2;
       s+='<polygon points="'+tx+','+(ty-tr)+' '+(tx-tr)+','+(ty+tr*0.6)+' '+(tx+tr)+','+(ty+tr*0.6)+'" fill="none" stroke="'+col+'" stroke-width="1.6"/>';
       s+='<text x="'+tx+'" y="'+(ty+5)+'" text-anchor="middle" font-family="Arial" font-size="11" font-weight="700" fill="'+col+'">'+tv+'</text>';
       s+='<text x="'+tx+'" y="'+(ty+tr*0.6+10)+'" text-anchor="middle" font-family="Arial" font-size="7.5" fill="'+col+'"'+lbOp+'>tone</text>';
     }
-    // Пятиугольник = база
     if(bv!=null){
       const bx=ax+dir*sp*3,br=15;
       var pts='';
@@ -380,13 +351,11 @@ function drawVariables(data){
     }
   }
 
-  // Design (левая сторона, красный): Digestion (Sun) → Environment (NorthNode)
   arrow(rows.leftUp[0],rows.leftUp[1],   isLeft(varD.designDigestion),PC.chR);
   shapes(rows.leftUp[0],rows.leftUp[1],  true, dCtbSun);
   arrow(rows.leftDown[0],rows.leftDown[1],isLeft(varD.designEnvironment),PC.chR);
   shapes(rows.leftDown[0],rows.leftDown[1],true, dCtbNode);
 
-  // Personality (правая сторона, чёрный): Motivation (Sun) → Perspective (NorthNode)
   arrow(rows.rightUp[0],rows.rightUp[1],   isLeft(varD.personalityMotivation),PC.chP);
   shapes(rows.rightUp[0],rows.rightUp[1],  false, pCtbSun);
   arrow(rows.rightDown[0],rows.rightDown[1],isLeft(varD.personalityPerspective),PC.chP);
@@ -396,36 +365,21 @@ function drawVariables(data){
 }
 
 function drawBodySilhouette(){
-  // Референс: выраженная голова (широкий овал), узкая шея, широкие плечи, тело расширяется книзу
   var p='';
   p+='M '+CX+',8 ';
-  // Правая сторона головы — широкий овал (покрывает Head+Ajna центры, ≈±76px на y=88)
   p+='C '+(CX+65)+',8 '+(CX+80)+',68 '+(CX+76)+',120 ';
-  // Голова → правая шея (плавное сужение до ±38px)
   p+='C '+(CX+70)+',168 '+(CX+52)+',228 '+(CX+38)+',268 ';
-  // Шея → правое плечо (резкий прыжок наружу)
   p+='C '+(CX+39)+',285 '+(CX+190)+',299 '+(CX+192)+',330 ';
-  // Правое плечо → тело (плавное расширение)
   p+='C '+(CX+194)+',360 '+(CX+226)+',430 '+(CX+250)+',530 ';
-  // Правая сторона тела
   p+='C '+(CX+264)+',615 '+(CX+274)+',700 '+(CX+276)+',790 ';
-  // Правый низ
   p+='C '+(CX+276)+',858 '+(CX+264)+',920 '+(CX+240)+',955 ';
-  // Правый угол низа
   p+='C '+(CX+207)+',979 '+(CX+142)+',984 '+CX+',984 ';
-  // Левый угол низа (симметрия)
   p+='C '+(CX-142)+',984 '+(CX-207)+',979 '+(CX-240)+',955 ';
-  // Левый низ
   p+='C '+(CX-264)+',920 '+(CX-276)+',858 '+(CX-276)+',790 ';
-  // Левая сторона тела
   p+='C '+(CX-274)+',700 '+(CX-264)+',615 '+(CX-250)+',530 ';
-  // Левое плечо → тело
   p+='C '+(CX-226)+',430 '+(CX-194)+',360 '+(CX-192)+',330 ';
-  // Левое плечо (симметрия)
   p+='C '+(CX-190)+',299 '+(CX-39)+',285 '+(CX-38)+',268 ';
-  // Левая шея
   p+='C '+(CX-52)+',228 '+(CX-70)+',168 '+(CX-76)+',120 ';
-  // Левая голова — закрываем овал
   p+='C '+(CX-80)+',68 '+(CX-65)+',8 '+CX+',8 Z';
   return '<path d="'+p+'" fill="'+PC.bS+'" opacity="0.2"/>';
 }
@@ -442,7 +396,6 @@ function generateBodygraph(data){
   s+='<rect width="'+W+'" height="'+H+'" fill="'+PC.bg+'"/>';
   s+=drawBodySilhouette();
 
-  // Каналы: половинки от каждых ворот
   STD_CH.forEach(function(ck){
     const parts=ck.split('|');
     const ap=parts[0].split(':'),bp=parts[1].split(':');
@@ -451,10 +404,8 @@ function generateBodygraph(data){
     s+=drawGateStub(p1[0],p1[1],p2[0],p2[1],g1,pG,dG);
     s+=drawGateStub(p2[0],p2[1],p1[0],p1[1],g2,pG,dG);
   });
-  // Интеграционный контур: T-junction архитектура
   s+=drawIntChannels(pG,dG);
 
-  // Центры
   Object.entries(SC).forEach(function(entry){
     const name=entry[0],c=entry[1];
     const fill=defined.has(name)?PC.cD:PC.cU,sw=2.5;
@@ -464,7 +415,6 @@ function generateBodygraph(data){
     else s+='<rect x="'+(c.x-c.w/2)+'" y="'+(c.y-c.h/2)+'" width="'+c.w+'" height="'+c.h+'" rx="'+c.rx+'" fill="'+fill+'" stroke="'+PC.str+'" stroke-width="'+sw+'"/>';
   });
 
-  // Ворота
   Object.entries(GO).forEach(function(entry){
     const cn=entry[0],gates=entry[1];
     const c=SC[cn],isDef=defined.has(cn);
@@ -488,4 +438,12 @@ function generateBodygraph(data){
 
   if(chart.type){
     s+='<rect x="0" y="'+(H-48)+'" width="'+W+'" height="48" fill="'+PC.chP+'" opacity="0.9"/>';
-    s+='<text x="'+CX+'" y="'+(H-26)+'" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" letter-
+    s+='<text x="'+CX+'" y="'+(H-26)+'" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" letter-spacing="1.5" fill="#FFF">'+chart.type.toUpperCase()+' · '+(chart.profile||'')+'</text>';
+    s+='<text x="'+CX+'" y="'+(H-8)+'" text-anchor="middle" font-family="Arial" font-size="10" fill="#EDD8B0">'+(chart.authority||'')+' · '+(chart.definition||'')+'</text>';
+  }
+  s+='<text x="16" y="'+(H-8)+'" font-family="Arial" font-size="9" fill="'+PC.str+'" opacity="0.7">Designed by Nataly Popovych</text>';
+  s+='</svg>';
+  return s;
+}
+
+module.exports = {generateBodygraph: generateBodygraph};
