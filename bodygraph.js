@@ -5,8 +5,8 @@
  */
 
 const PC = {
-  bg:'#FAF4F1', cD:'#90734B', cU:'#EEE3D4', str:'#BEA582',
-  chP:'#30302E', chR:'#A62121',
+  bg:'#FAF4F1', cD:'#ba935d', cU:'#EEE3D4', str:'#BEA582',
+  chP:'#30302E', chR:'#A62B28',
   gG:'#EDD5A0', gGT:'#7A5020', gGS:'#C8A060',
   gW:'#FFFFFF',  gWT:'#A08060', gWS:'#C8B090',
   bS:'#D4C0A0',
@@ -294,12 +294,12 @@ function drawPlanetPanel(acts,isDes,px,gp){
     // glW уже объявлена выше (gl.length*8+14); используем её для позиции гексаграммы
     if(isDes){
       r+='<text x="'+(px+13)+'" y="'+(yg+2)+'" text-anchor="middle" font-family="Arial" font-size="'+fsym+'" fill="'+col+'"'+sa+'>'+sym+'</text>';
-      r+='<text x="'+(px+28)+'" y="'+yg+'" font-family="Arial" font-size="13" fill="'+col+'"><tspan font-weight="700">'+gl+'</tspan><tspan font-weight="700">.'+ln+'</tspan>'+(fixSym?'<tspan font-size="10" font-weight="bold" dx="2">'+fixSym+'</tspan>':'')+(retSym?'<tspan font-size="9" dx="1" opacity="0.7">'+retSym+'</tspan>':'')+'</text>';
-      if(isJuxt)r+=drawJuxtSym(px+28+glW+9,yg-4,col);
-      r+='<text x="'+(px+28)+'" y="'+yc+'" font-family="Arial" font-size="11" fill="'+col+'" opacity="0.85">'+ctb+'</text>';
+      r+='<text x="'+(px+31)+'" y="'+yg+'" font-family="Arial" font-size="13" fill="'+col+'"><tspan font-weight="700">'+gl+'</tspan><tspan font-weight="700">.'+ln+'</tspan>'+(fixSym?'<tspan font-size="10" font-weight="bold" dx="2">'+fixSym+'</tspan>':'')+(retSym?'<tspan font-size="9" dx="1" opacity="0.7">'+retSym+'</tspan>':'')+'</text>';
+      if(isJuxt)r+=drawJuxtSym(px+31+glW+9,yg-4,col);
+      r+='<text x="'+(px+31)+'" y="'+yc+'" font-family="Arial" font-size="11" fill="'+col+'" opacity="0.85">'+ctb+'</text>';
       r+='<text x="'+(px+PW-3)+'" y="'+yg+'" text-anchor="end" font-family="Arial" font-size="11" fill="'+ZOD_COL+'" opacity="0.5">'+zod+'</text>';
     } else {
-      const glEnd=px+PW-28;
+      const glEnd=px+PW-31;
       r+='<text x="'+(px+PW-13)+'" y="'+(yg+2)+'" text-anchor="middle" font-family="Arial" font-size="'+fsym+'" fill="'+col+'"'+sa+'>'+sym+'</text>';
       r+='<text x="'+glEnd+'" y="'+yg+'" text-anchor="end" font-family="Arial" font-size="13" fill="'+col+'">'+(retSym?'<tspan font-size="9" dx="-1" opacity="0.7">'+retSym+'</tspan>':'')+(fixSym?'<tspan font-size="10" font-weight="bold" dx="-2">'+fixSym+'</tspan>':'')+'<tspan font-weight="700">'+gl+'</tspan><tspan font-weight="700">.'+ln+'</tspan></text>';
       if(isJuxt)r+=drawJuxtSym(glEnd-glW-(retSym?10:0)-9,yg-4,col);
@@ -474,7 +474,7 @@ function generateBodygraph(data){
       const r=11,fs=g>=10?11:12;
       const gold=pG.has(g)||dG.has(g);
       const fill=gold?PC.gG:(isDef?PC.cD:PC.cU);
-      const tf=gold?PC.gGT:(isDef?'#F5EEE4':'#A08060');
+      const tf=gold?PC.gGT:(isDef?'#5C3A10':'#A08060');
       const st=gold?PC.gGS:(isDef?PC.str:PC.gWS);
       s+='<circle cx="'+gx.toFixed(1)+'" cy="'+gy.toFixed(1)+'" r="'+r+'" fill="'+fill+'" stroke="'+st+'" stroke-width="1.2"/>';
       s+='<text x="'+gx.toFixed(1)+'" y="'+(gy+3.8).toFixed(1)+'" text-anchor="middle" font-family="Arial" font-size="'+fs+'" font-weight="700" fill="'+tf+'">'+g+'</text>';
