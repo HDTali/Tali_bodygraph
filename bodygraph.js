@@ -431,9 +431,9 @@ function generateBodygraph(data){
       const gx=c.x+off[0],gy=c.y+off[1];
       const r=11,fs=g>=10?11:12;
       const gold=pG.has(g)||dG.has(g);
-      const fill=gold?PC.gG:(isDef?'none':PC.cU);
+      const fill=gold?PC.gG:(isDef?PC.cD:PC.cU);
       const tf=gold?PC.gGT:(isDef?'#FFFFFF':'#A08060');
-      const st=gold?PC.gGS:(isDef?'none':PC.gWS);
+      const st=gold?PC.gGS:(isDef?PC.str:PC.gWS);
       s+='<circle cx="'+gx.toFixed(1)+'" cy="'+gy.toFixed(1)+'" r="'+r+'" fill="'+fill+'" stroke="'+st+'" stroke-width="1.2"/>';
       s+='<text x="'+gx.toFixed(1)+'" y="'+(gy+3.8).toFixed(1)+'" text-anchor="middle" font-family="Arial" font-size="'+fs+'" font-weight="700" fill="'+tf+'">'+g+'</text>';
     });
