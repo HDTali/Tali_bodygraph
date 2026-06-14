@@ -5,7 +5,7 @@
  */
 
 const PC = {
-  bg:'#FAF4F1', cD:'#90734B', cU:'#EEE3D4', str:'#BEA582',
+  bg:'#FAF4F1', cD:'#9E7D5E', cU:'#EEE3D4', str:'#BEA582',
   chP:'#30302E', chR:'#A62B28',
   gG:'#EDD5A0', gGT:'#7A5020', gGS:'#C8A060',
   gW:'#FFFFFF',  gWT:'#A08060', gWS:'#C8B090',
