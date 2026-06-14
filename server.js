@@ -261,4 +261,14 @@ app.post('/bodygraph', async function(req, res) {
     }
     const svg = generateBodygraph(data);
     const png = await svgToPng(svg);
-    res.set('Content-Type', 
+    res.set('Content-Type', 'image/png');
+    res.send(png);
+  } catch (err) {
+    console.error('Ошибка:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.listen(PORT, function() {
+  console.log('Bodygraph service started: http://localhost:' + PORT);
+});
