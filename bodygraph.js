@@ -144,6 +144,12 @@ function centerPath(c,x,y){
 
 function gXY(cn,g){const c=SC[cn],o=(GO[cn]||{})[g]||[0,0];return[c.x+o[0],c.y+o[1]];}
 
+// GL: line-anchor overrides — канальная линия выходит отсюда, кружок ворот остаётся на GO позиции
+const GL={
+  35:[68,-31],16:[-62,-31],
+};
+function glXY(cn,g){if(GL[g]){const c=SC[cn];return[c.x+GL[g][0],c.y+GL[g][1]];}return gXY(cn,g);}
+
 function chanPerp(dx,dy,off){
   const len=Math.hypot(dx,dy);if(len<1)return[[0,0],[0,0]];
   const p1x=-dy/len*off,p1y=dx/len*off,p2x=dy/len*off,p2y=-dx/len*off;
@@ -400,7 +406,7 @@ function generateBodygraph(data){
     const parts=ck.split('|');
     const ap=parts[0].split(':'),bp=parts[1].split(':');
     const cn1=ap[0],g1=parseInt(ap[1]),cn2=bp[0],g2=parseInt(bp[1]);
-    const p1=gXY(cn1,g1),p2=gXY(cn2,g2);
+    const p1=glXY(cn1,g1),p2=glXY(cn2,g2);
     s+=drawGateStub(p1[0],p1[1],p2[0],p2[1],g1,pG,dG);
     s+=drawGateStub(p2[0],p2[1],p1[0],p1[1],g2,pG,dG);
   });
