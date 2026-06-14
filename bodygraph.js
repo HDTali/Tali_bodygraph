@@ -5,7 +5,7 @@
  */
 
 const PC = {
-  bg:'#FAF4F1', cD:'#ba935d', cU:'#EEE3D4', str:'#BEA582',
+  bg:'#FAF4F1', cD:'#9f7f53', cU:'#EEE3D4', str:'#BEA582',
   chP:'#30302E', chR:'#A62B28',
   gG:'#EDD5A0', gGT:'#7A5020', gGS:'#C8A060',
   gW:'#FFFFFF',  gWT:'#A08060', gWS:'#C8B090',
@@ -88,7 +88,7 @@ const SC = {
 const GO = {
   Head:{61:[0,15],63:[25,16],64:[-25,16]},
   Ajna:{4:[25,-25],11:[27,4],17:[-27,4],24:[0,-25],43:[0,45],47:[-25,-25]},
-  Throat:{8:[0,54],12:[53,0],16:[-31,5],20:[-53,24],23:[0,-54],31:[-27,44],33:[27,44],35:[31,5],45:[48,27],56:[27,-44],62:[-27,-44]},
+  Throat:{8:[0,54],12:[53,0],16:[-40,-18],20:[-53,24],23:[0,-54],31:[-27,44],33:[27,44],35:[40,-18],45:[48,27],56:[27,-44],62:[-27,-44]},
   G:{1:[0,-39],2:[0,42],7:[-27,-19],10:[-49,0],13:[27,-19],15:[-26,23],25:[49,2],46:[25,22]},
   Ego:{21:[10,-14],26:[-11,13],40:[11,13],51:[-12,-11]},
   Sacral:{3:[0,57],5:[-25,-49],9:[26,51],14:[0,-56],27:[-55,15],29:[25,-51],34:[-47,-29],42:[-26,51],59:[57,15]},
@@ -488,13 +488,4 @@ function generateBodygraph(data){
 
   if(chart.type){
     s+='<rect x="0" y="'+(H-48)+'" width="'+W+'" height="48" fill="'+PC.chP+'" opacity="0.9"/>';
-    s+='<text x="'+CX+'" y="'+(H-26)+'" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" letter-spacing="1.5" fill="#FFF">'+chart.type.toUpperCase()+' · '+(chart.profile||'')+'</text>';
-    s+='<text x="'+CX+'" y="'+(H-8)+'" text-anchor="middle" font-family="Arial" font-size="10" fill="#EDD8B0">'+(chart.authority||'')+' · '+(chart.definition||'')+'</text>';
-  }
-  s+='<text x="16" y="'+(H-8)+'" font-family="Arial" font-size="9" fill="'+PC.str+'" opacity="0.7">Designed by Nataly Popovych</text>';
-  s+='</svg>';
-  return s;
-}
-
-module.exports = {generateBodygraph: generateBodygraph};
-
+    s+='<text x="'+CX+'" y="'+(H-26)+'" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" letter-

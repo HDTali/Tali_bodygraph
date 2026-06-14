@@ -33,7 +33,7 @@ const CENTER_MAP = {
   spleen:'Spleen', root:'Root'
 };
 
-const VERSION = 'v20260614-fix23';
+const VERSION = 'v20260614-fix24';
 
 /**
  * Конвертирует personality/design в map {planet: obj}.
@@ -261,14 +261,4 @@ app.post('/bodygraph', async function(req, res) {
     }
     const svg = generateBodygraph(data);
     const png = await svgToPng(svg);
-    res.set('Content-Type', 'image/png');
-    res.send(png);
-  } catch (err) {
-    console.error('Ошибка:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.listen(PORT, function() {
-  console.log('Bodygraph service started: http://localhost:' + PORT);
-});
+    res.set('Content-Type', 
