@@ -146,7 +146,9 @@ function gXY(cn,g){const c=SC[cn],o=(GO[cn]||{})[g]||[0,0];return[c.x+o[0],c.y+o
 
 // GL: line-anchor overrides — канальная линия выходит отсюда, кружок ворот остаётся на GO позиции
 const GL={
-  35:[68,-31],16:[-62,-31],
+  12:[50,-8],35:[65,-31],45:[50,30],
+  16:[-62,-31],
+  22:[2,-35],36:[29,-43],
 };
 function glXY(cn,g){if(GL[g]){const c=SC[cn];return[c.x+GL[g][0],c.y+GL[g][1]];}return gXY(cn,g);}
 
