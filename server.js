@@ -33,7 +33,7 @@ const CENTER_MAP = {
   spleen:'Spleen', root:'Root'
 };
 
-const VERSION = 'v20260614-fix24';
+const VERSION = 'v20260614-fix25';
 
 /**
  * Конвертирует personality/design в map {planet: obj}.
