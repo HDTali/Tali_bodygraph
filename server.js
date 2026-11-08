@@ -33,7 +33,7 @@ const CENTER_MAP = {
   spleen:'Spleen', root:'Root'
 };
 
-const VERSION = 'v20260614-fix36';
+const VERSION = 'v20261108-theme1';
 
 /**
  * Конвертирует personality/design в map {planet: obj}.
@@ -241,7 +241,7 @@ app.post('/bodygraph/svg', function(req, res) {
     if (!data.centers || !data.gates) {
       return res.status(400).json({ error: 'Нужны поля centers и gates' });
     }
-    const svg = generateBodygraph(data);
+    const svg = generateBodygraph(data, { theme: req.query.theme });
     res.set('Content-Type', 'image/svg+xml');
     res.send(svg);
   } catch (err) {
@@ -259,7 +259,7 @@ app.post('/bodygraph', async function(req, res) {
     if (!data.centers || !data.gates) {
       return res.status(400).json({ error: 'Нужен полный JSON от THD API' });
     }
-    const svg = generateBodygraph(data);
+    const svg = generateBodygraph(data, { theme: req.query.theme });
     const png = await svgToPng(svg);
     res.set('Content-Type', 'image/png');
     res.send(png);

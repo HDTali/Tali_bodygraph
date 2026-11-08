@@ -10,6 +10,24 @@ const PC = {
   gG:'#EDD5A0', gGT:'#7A5020', gGS:'#C8A060',
   gW:'#FFFFFF',  gWT:'#A08060', gWS:'#C8B090',
   bS:'#D4C0A0',
+  // Gate number text in defined / undefined centres, bottom band.
+  // Defaults equal the values that were hard-coded before, so the default picture is unchanged.
+  gDT:'#FFFFFF', gUT:'#A08060',
+  foot:'#30302E', footOp:'0.9', footT:'#FFF', footS:'#EDD8B0',
+};
+
+// Optional colour themes. The default (no theme) is the Telegram bot's look and must stay as is.
+// 'site' — night / dawn / gold palette of the English website.
+const THEMES = {
+  site: {
+    bg:'#F7F2EA', cD:'#D3A04C', cU:'#EFE7DA', str:'#C9A96E',
+    chP:'#2A2559', chR:'#C4615A',
+    gG:'#2A2559', gGT:'#F6E3B8', gGS:'#E9B65C',
+    gW:'#FFFFFF', gWT:'#A08060', gWS:'#D9C4A0',
+    bS:'#D9C8AE',
+    gDT:'#5A3F1C', gUT:'#A08060',
+    foot:'#14122B', footOp:'1', footT:'#E9B65C', footS:'#B9B3D6',
+  },
 };
 const ZOD_COL = '#C8A060';
 const T_J34 = 0.308;
@@ -432,7 +450,7 @@ function generateBodygraph(data){
       const r=11,fs=g>=10?11:12;
       const gold=pG.has(g)||dG.has(g);
       const fill=gold?PC.gG:(isDef?PC.cD:PC.cU);
-      const tf=gold?PC.gGT:(isDef?'#FFFFFF':'#A08060');
+      const tf=gold?PC.gGT:(isDef?PC.gDT:PC.gUT);
       const st=gold?PC.gGS:(isDef?PC.str:PC.gWS);
       s+='<circle cx="'+gx.toFixed(1)+'" cy="'+gy.toFixed(1)+'" r="'+r+'" fill="'+fill+'" stroke="'+st+'" stroke-width="1.2"/>';
       s+='<text x="'+gx.toFixed(1)+'" y="'+(gy+3.8).toFixed(1)+'" text-anchor="middle" font-family="Arial" font-size="'+fs+'" font-weight="700" fill="'+tf+'">'+g+'</text>';
@@ -445,13 +463,24 @@ function generateBodygraph(data){
   s+=drawPlanetPanel(pActs,false,W-22-PW,gp);
 
   if(chart.type){
-    s+='<rect x="0" y="'+(H-48)+'" width="'+W+'" height="48" fill="'+PC.chP+'" opacity="0.9"/>';
-    s+='<text x="'+CX+'" y="'+(H-26)+'" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" letter-spacing="1.5" fill="#FFF">'+chart.type.toUpperCase()+' · '+(chart.profile||'')+'</text>';
-    s+='<text x="'+CX+'" y="'+(H-8)+'" text-anchor="middle" font-family="Arial" font-size="10" fill="#EDD8B0">'+(chart.authority||'')+' · '+(chart.definition||'')+'</text>';
+    s+='<rect x="0" y="'+(H-48)+'" width="'+W+'" height="48" fill="'+PC.foot+'" opacity="'+PC.footOp+'"/>';
+    s+='<text x="'+CX+'" y="'+(H-26)+'" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" letter-spacing="1.5" fill="'+PC.footT+'">'+chart.type.toUpperCase()+' · '+(chart.profile||'')+'</text>';
+    s+='<text x="'+CX+'" y="'+(H-8)+'" text-anchor="middle" font-family="Arial" font-size="10" fill="'+PC.footS+'">'+(chart.authority||'')+' · '+(chart.definition||'')+'</text>';
   }
   s+='<text x="16" y="'+(H-8)+'" font-family="Arial" font-size="9" fill="'+PC.str+'" opacity="0.7">Designed by Nataly Popovych</text>';
   s+='</svg>';
   return s;
 }
 
-module.exports = {generateBodygraph: generateBodygraph};
+// Draws with an optional theme (opts.theme), then puts the default colours back.
+// Rendering is synchronous, so the temporary swap can't leak into another request.
+function generateBodygraphThemed(data, opts){
+  const theme = opts && THEMES[opts.theme];
+  if(!theme) return generateBodygraph(data);
+  const saved = Object.assign({}, PC);
+  Object.assign(PC, theme);
+  try { return generateBodygraph(data); }
+  finally { Object.assign(PC, saved); }
+}
+
+module.exports = {generateBodygraph: generateBodygraphThemed, THEMES: THEMES};
